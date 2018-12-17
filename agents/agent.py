@@ -49,6 +49,7 @@ class Agent():
         self.noise.reset()
         state = self.task.reset()
         self.last_state = state
+        self.score = 0
         return state
 
     def step(self, action, reward, next_state, done):

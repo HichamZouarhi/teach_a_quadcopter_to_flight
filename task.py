@@ -17,11 +17,13 @@ class Task():
         # Simulation
         self.sim = PhysicsSim(init_pose, init_velocities, init_angle_velocities, runtime)
         self.action_repeat = 3
+        
+        self.action_low = 200
+        self.action_high = 600
+        self.action_size = 4
 
         self.state_size = self.action_repeat * 6
-        self.action_low = 0
-        self.action_high = 900
-        self.action_size = 4
+        
 
         # Goal
         self.target_pos = target_pos if target_pos is not None else np.array([0., 0., 10.]) 
@@ -32,28 +34,30 @@ class Task():
         # first initialize the reward by how close the quadcopter is to target,
         # and a penalty by the stability of angles while taking off
         reward = 0
-        penalty = 0
         
         # The penalty would be the sum of the angles, to keep the quadcopter going straight up
-        penalty += abs(self.sim.pose[3:6]).sum()
-        
+        stability_penalty = abs(self.sim.pose[3:6]).sum()
+        stability_penalty += abs(self.sim.pose[0] - self.target_pos[0])
+        stability_penalty += abs(self.sim.pose[1] - self.target_pos[1])
         # also a penalty for how far the quadcopter is from the target
-        penalty = abs(self.sim.pose[0] - self.target_pos[0]) ** 2 \
-            + abs(self.sim.pose[1] - self.target_pos[1]) ** 2 \
-            + abs(self.sim.pose[2] - self.target_pos[2]) ** 2
         
+        distance_penalty = abs(self.sim.pose[2] - self.target_pos[2])
+        
+        penalty = distance_penalty + stability_penalty
         # and for the reward it should be the Euclidean distance
         distance = np.sqrt((self.sim.pose[0] - self.target_pos[0]) ** 2 + 
                            (self.sim.pose[1] - self.target_pos[1]) ** 2 + 
                            (self.sim.pose[2] - self.target_pos[2]) ** 2)
+#         distance = abs(self.sim.pose[2] - self.target_pos[2])
 
-        if distance < 5: # If the Agent is close by a threshold to the target, he is a good boy and should get his reward 
-            reward += 1000.0
+        if distance < 2.0: # If the Agent is close by a threshold to the target, he is a good boy and should get his reward 
+            reward += 100.0
         else: # otherwise he should get a smaller one to keep him going
-            reward += 50.0 
-         
+            reward += 10.0 
+        
         # and Now combine the reward with the penalty
-        return reward - penalty * 0.005
+#         return np.tanh(reward - (penalty * 0.005))
+        return reward - (penalty * 0.005)
 
     def step(self, rotor_speeds):
         """Uses action to obtain next state, reward, done."""
